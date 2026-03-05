@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->integer('duration'); 
+            $table->integer('duration'); // En minutos
             $table->decimal('price', 10, 2);
             $table->enum('status', ['Activo', 'Inactivo'])->default('Activo');
             $table->timestamps();
