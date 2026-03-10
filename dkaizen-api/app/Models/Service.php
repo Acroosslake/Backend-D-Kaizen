@@ -16,4 +16,9 @@ class Service extends Model
         'price',
         'status'
     ];
+    // Un servicio puede tener MUCHAS citas
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

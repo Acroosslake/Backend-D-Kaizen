@@ -33,7 +33,11 @@ class User extends Authenticatable implements JWTSubject // <-- 2. ImplementaciÃ
     {
         return $this->getKey();
     }
-
+// Un usuario puede tener MUCHAS citas
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
     public function getJWTCustomClaims()
     {
         // Guardamos el rol en el token para que React sepa si eres Admin o Cliente

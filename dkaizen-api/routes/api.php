@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\AppointmentController;
+
 
 // ESTAS DEBEN ESTAR AFUERA (Públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -15,5 +17,7 @@ Route::middleware('auth:api')->group(function () {
         return response()->json(auth('api')->user());
     });
 });
+
 //esta linea se agrega para ahorranos trabajo ya que sin esta Para hacer un CRUD completo, normalmente tendrías que programar 5 rutas (endpoints) distintas a mano, indicando el método HTTP exacto para cada acción. despues la pondremos
 Route::apiResource('services', ServiceController::class);
+Route::apiResource('appointments', AppointmentController::class);
