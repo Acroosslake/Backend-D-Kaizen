@@ -6,6 +6,8 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\BarberController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ProductController;
+
 
 
 // ESTAS DEBEN ESTAR AFUERA (Públicas)
@@ -26,3 +28,4 @@ Route::apiResource('appointments', AppointmentController::class);
 Route::apiResource('barbers', BarberController::class);
 Route::apiResource('feedback', FeedbackController::class);
 Route::apiResource('sanctions', SanctionController::class);
+Route::apiResource('products', ProductController::class);
