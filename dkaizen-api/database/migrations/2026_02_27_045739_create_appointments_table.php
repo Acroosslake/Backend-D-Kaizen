@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('service_id')->constrained('services')->onDelete('cascade');
+            $table->foreignId('barber_id')->constrained('barbers')->onDelete('cascade'); 
             $table->dateTime('appointment_date');
-            $table->enum('status', ['Pendiente', 'Completada', 'Cancelada'])->default('Pendiente');
+            $table->enum('status', ['pending', 'confirmed', 'canceled'])->default('pending');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

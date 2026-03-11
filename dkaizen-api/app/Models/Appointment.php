@@ -9,7 +9,7 @@ class Appointment extends Model
 {
     use HasFactory;
 
-    // 1. Los campos que permitimos llenar masivamente
+    //Los campos que permitimos llenar masivamente
     protected $fillable = [
         'user_id', 
         'service_id', 
@@ -17,14 +17,19 @@ class Appointment extends Model
         'status', 
         'notes'
     ];
+    // Relación: Una cita es atendida por UN Barbero
+    public function barber()
+    {
+        return $this->belongsTo(Barber::class);
+    }
 
-    // 2. Relación: Una cita PERTENECE a un Usuario (Cliente)
+    //Relación: Una cita PERTENECE a un Usuario (Cliente)
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // 3. Relación: Una cita PERTENECE a un Servicio (Corte/Barba)
+    //Relación: Una cita PERTENECE a un Servicio (Corte/Barba)
     public function service()
     {
         return $this->belongsTo(Service::class);
