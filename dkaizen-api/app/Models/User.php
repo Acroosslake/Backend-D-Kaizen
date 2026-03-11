@@ -27,22 +27,31 @@ class User extends Authenticatable implements JWTSubject // <-- 2. Implementaci�
         ];
     }
 
-    // --- 3. Métodos requeridos por JWT ---
+    //Métodos requeridos por JWT ---
 
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
-// Un usuario puede tener MUCHAS citas
-    public function appointments()
-    {
-        return $this->hasMany(Appointment::class);
-    }
+
     public function getJWTCustomClaims()
     {
         // Guardamos el rol en el token para que React sepa si eres Admin o Cliente
         return [
             'role' => $this->role,
         ];
+    }
+    
+    // Un usuario puede tener MUCHAS citas
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
+    
+
+    // Un usuario puede dejar MUCHOS feedbacks
+    public function feedbacks()
+    {
+        return $this->hasMany(Feedback::class);
     }
 }

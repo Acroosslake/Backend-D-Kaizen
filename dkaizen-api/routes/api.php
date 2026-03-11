@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\BarberController;
+use App\Http\Controllers\FeedbackController;
+
 
 // ESTAS DEBEN ESTAR AFUERA (Públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -22,3 +24,4 @@ Route::get('/me', function () {
 Route::apiResource('services', ServiceController::class);
 Route::apiResource('appointments', AppointmentController::class);
 Route::apiResource('barbers', BarberController::class);
+Route::apiResource('feedback', FeedbackController::class);
