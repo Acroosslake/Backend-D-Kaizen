@@ -7,6 +7,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\BarberController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\MovementController;
 
 
 
@@ -29,3 +30,4 @@ Route::apiResource('barbers', BarberController::class);
 Route::apiResource('feedback', FeedbackController::class);
 Route::apiResource('sanctions', SanctionController::class);
 Route::apiResource('products', ProductController::class);
+Route::apiResource('movements', MovementController::class);

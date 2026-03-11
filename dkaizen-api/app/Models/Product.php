@@ -15,4 +15,10 @@ class Product extends Model
         'purchase_price',
         'stock'
     ];
-}
+
+    //producto puede tener MUCHOS movimientos (entradas y salidas)
+    public function movements()
+    {
+        return $this->hasMany(Movement::class);
+    }
+    }
