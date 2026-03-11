@@ -34,4 +34,9 @@ class Appointment extends Model
     {
         return $this->belongsTo(Service::class);
     }
+    // Una cita puede generar UNA sanción (por no ir o cancelar tarde)
+    public function sanction()
+    {
+        return $this->hasOne(Sanction::class);
+    }
 }

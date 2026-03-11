@@ -25,3 +25,4 @@ Route::apiResource('services', ServiceController::class);
 Route::apiResource('appointments', AppointmentController::class);
 Route::apiResource('barbers', BarberController::class);
 Route::apiResource('feedback', FeedbackController::class);
+Route::apiResource('sanctions', SanctionController::class);

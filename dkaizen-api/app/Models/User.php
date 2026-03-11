@@ -54,4 +54,10 @@ class User extends Authenticatable implements JWTSubject // <-- 2. ImplementaciÃ
     {
         return $this->hasMany(Feedback::class);
     }
+
+    // Un usuario puede tener MUCHAS sanciones
+    public function sanctions()
+    {
+        return $this->hasMany(Sanction::class);
+    }
 }
