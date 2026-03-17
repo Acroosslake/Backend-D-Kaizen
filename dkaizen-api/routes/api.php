@@ -8,26 +8,35 @@ use App\Http\Controllers\BarberController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\MovementController;
+use App\Http\Controllers\SanctionController;
+use App\Http\Controllers\PasswordResetController;
 
-
-
-// ESTAS DEBEN ESTAR AFUERA (Públicas)
+// ==========================================
+// RUTAS PÚBLICAS (No requieren Token VIP)
+// ==========================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']); 
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);  
 
-// ESTAS DEBEN ESTAR ADENTRO (Protegidas)
+// ==========================================
+// RUTAS PROTEGIDAS (Requieren Token VIP)
+// ==========================================
 Route::middleware('auth:api')->group(function () {
-Route::post('/logout', [AuthController::class, 'logout']);
-Route::get('/me', function () {
+    
+    // Rutas de sesión que necesitan saber quién eres
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', function () {
         return response()->json(auth('api')->user());
     });
-});
 
-//esta linea se agrega para ahorranos trabajo ya que sin esta Para hacer un CRUD completo, normalmente tendrías que programar 5 rutas (endpoints) distintas a mano, indicando el método HTTP exacto para cada acción. despues la pondremos
-Route::apiResource('services', ServiceController::class);
-Route::apiResource('appointments', AppointmentController::class);
-Route::apiResource('barbers', BarberController::class);
-Route::apiResource('feedback', FeedbackController::class);
-Route::apiResource('sanctions', SanctionController::class);
-Route::apiResource('products', ProductController::class);
-Route::apiResource('movements', MovementController::class);
+    // Rutas de los recursos de tu Barbería
+    Route::apiResource('services', ServiceController::class);
+    Route::apiResource('appointments', AppointmentController::class);
+    Route::apiResource('barbers', BarberController::class);
+    Route::apiResource('feedback', FeedbackController::class);
+    Route::apiResource('sanctions', SanctionController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::apiResource('movements', MovementController::class);
+    
+});

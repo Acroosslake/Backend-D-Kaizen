@@ -75,4 +75,3 @@ class FeedbackController extends Controller
         return response()->json(['message' => 'Reseña eliminada correctamente']);
     }
 }
-}
