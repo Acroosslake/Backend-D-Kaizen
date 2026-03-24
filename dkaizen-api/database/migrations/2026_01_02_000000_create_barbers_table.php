@@ -9,21 +9,19 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+ public function up()
     {
         Schema::create('barbers', function (Blueprint $table) {
-            $table->id(); // Este es tu cod_barbero
-            
-            // Llave foránea hacia el usuario (cod_usuario)
+            $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             
-            // Campos específicos del diagrama
-            $table->string('rh', 3);
-            $table->string('eps', 30);
-            $table->enum('tipo_contrato', ['fijo', 'temporal', 'prestacion']); // tipo_contrato
-            $table->time('hora_entrada'); // hora_entrada
-            $table->time('hora_salida');  // hora_salida
-            
+            // ESTAS SON LAS COLUMNAS QUE POSTGRES NO ENCUENTRA
+            $table->string('rh', 5)->nullable();
+            $table->string('eps', 50)->nullable();
+            $table->enum('contract_type', ['fijo', 'temporal', 'prestacion'])->default('prestacion');
+            $table->time('entry_time')->nullable();
+            $table->time('exit_time')->nullable();
+
             $table->timestamps();
         });
     }

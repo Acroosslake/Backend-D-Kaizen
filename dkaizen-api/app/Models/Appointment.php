@@ -12,6 +12,7 @@ class Appointment extends Model
     //Los campos que permitimos llenar masivamente
     protected $fillable = [
         'user_id', 
+        'barber_id',  
         'service_id', 
         'appointment_date', 
         'status', 
