@@ -9,22 +9,24 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    // Método para crear una cuenta (Cliente / Admin)
+// Método para crear una cuenta (Cliente / Admin)
     public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
+            'role' => 'sometimes|string|in:admin,barbero,cliente' // Permitimos que nos digan qué rol es
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'cliente' // Por defecto
+            'role' => $request->role ?? 'cliente' // Si no envían rol, es cliente por defecto
         ]);
-
+        
+        
         $token = Auth::guard('api')->login($user);
 
         return response()->json([
