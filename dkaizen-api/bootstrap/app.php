@@ -5,6 +5,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
+// 1. IMPORTANTE: Importamos tu middleware de Admin aquí arriba
+use App\Http\Middleware\CheckAdmin;
+
 // Importamos el error nativo de Laravel
 use Illuminate\Auth\AuthenticationException;
 
@@ -21,7 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        
+        // 2. REGISTRAMOS EL ALIAS DE TU GUARDIA VIP AQUÍ
+        $middleware->alias([
+            'is_admin' => CheckAdmin::class
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions) {
         
