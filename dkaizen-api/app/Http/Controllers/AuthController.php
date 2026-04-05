@@ -126,7 +126,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Error al procesar el login con Google.', 
+                'message' => 'Error al validar con Google.', 
                 'error' => $e->getMessage()
             ], 500);
         }
