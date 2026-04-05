@@ -5,9 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject; // <-- 1. Importación
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject; 
+use App\Notifications\CustomResetPassword;
 
-class User extends Authenticatable implements JWTSubject // <-- 2. Implementación
+class User extends Authenticatable implements JWTSubject 
 {
     use HasFactory, Notifiable;
 
@@ -60,4 +61,8 @@ class User extends Authenticatable implements JWTSubject // <-- 2. Implementaci�
     {
         return $this->hasMany(Sanction::class);
     }
+    public function sendPasswordResetNotification($token)
+{
+    $this->notify(new CustomResetPassword($token));
+}
 }
