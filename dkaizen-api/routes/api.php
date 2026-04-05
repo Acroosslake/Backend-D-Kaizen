@@ -19,34 +19,29 @@ use App\Http\Controllers\StatsController;
 */
 
 // --- 1. RUTAS PÚBLICAS ---
-// Cualquiera puede acceder a estas sin estar logueado
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']); 
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
 
-// Consultas públicas (para que los clientes vean antes de entrar)
 Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/barbers', [BarberController::class, 'index']);
 
 
 // --- 2. ZONA PROTEGIDA CON JWT ---
-// Cambiamos 'auth:sanctum' por 'auth:api' para que Laravel use tu token JWT
 Route::middleware('auth:api')->group(function () {
     
-    // Rutas básicas de usuario logueado
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', function () {
         return response()->json(auth()->user());
     });
 
     // --- SUB-ZONA: SOLO ADMINS ---
-    // Usamos el alias 'is_admin' que registraste en bootstrap/app.php
-    Route::middleware('is_admin')->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
         
-        // Gestión de Barberos y Servicios (Crear, Editar, Borrar)
+        // Gestión de Barberos y Servicios
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
         
@@ -56,13 +51,16 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('products', ProductController::class)->except(['index']);
     });
 
-    // --- SUB-ZONA: CLIENTES Y ACCIONES COMUNES ---
-    // Rutas para que el cliente maneje sus propias cosas
-    Route::get('/mis-citas', [AppointmentController::class, 'index']);
-    Route::post('/appointments', [AppointmentController::class, 'store']);
-    Route::post('/feedback', [FeedbackController::class, 'store']);
+    // --- SUB-ZONA: SOLO CLIENTES ---
+    // Unificamos todo en 'client' para que no haya choques
+    Route::middleware('role:client')->group(function () {
+        Route::get('/mis-citas', [AppointmentController::class, 'index']);
+        Route::post('/appointments', [AppointmentController::class, 'store']);
+        Route::post('/feedback', [FeedbackController::class, 'store']);
+    });
 
-    // Rutas compartidas (Ambos roles pueden ver productos o una cita específica)
+    // --- RUTAS COMPARTIDAS (Ambos roles) ---
+    // Estas quedan dentro de 'auth:api' pero fuera de los grupos específicos
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
 
