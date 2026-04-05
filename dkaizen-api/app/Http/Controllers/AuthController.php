@@ -17,14 +17,14 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'sometimes|string|in:admin,barbero,cliente'
+            'role' => 'sometimes|string|in:admin,barbero,client'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'cliente'
+            'role' => $request->role ?? 'client'
         ]);
         
         $token = Auth::guard('api')->login($user);
@@ -98,7 +98,7 @@ class AuthController extends Controller
                     'name' => $name,
                     'email' => $email,
                     'password' => Hash::make(Str::random(16)),
-                    'role' => 'cliente'
+                    'role' => 'client'
                 ]);
             }
 
