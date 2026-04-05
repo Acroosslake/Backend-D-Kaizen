@@ -1,60 +1,54 @@
 <?php
 
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\BarberController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\MovementController;
+use App\Http\Controllers\SanctionController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\StatsController; // No olvides importar este
 
-// 1. IMPORTANTE: Importamos tu middleware de Admin aquí arriba
-use App\Http\Middleware\CheckAdmin;
+// --- RUTAS PÚBLICAS ---
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']); 
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
 
-// Importamos el error nativo de Laravel
-use Illuminate\Auth\AuthenticationException;
+// Lectura pública
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/barbers', [BarberController::class, 'index']);
 
-// Importamos los errores de JWT
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
+// --- RUTAS PROTEGIDAS (Cualquier usuario logueado) ---
+Route::middleware('auth:api')->group(function () {
+    
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']); // Crea este método en tu AuthController
 
-return Application::configure(basePath: dirname(__DIR__))
-    ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
-        health: '/up',
-    )
-    ->withMiddleware(function (Middleware $middleware) {
+    // Rutas para CLIENTES (Citas, feedback, etc.)
+    Route::get('/mis-citas', [AppointmentController::class, 'index']);
+    Route::apiResource('appointments', AppointmentController::class);
+    Route::apiResource('feedback', FeedbackController::class);
+
+    // --- RUTAS SOLO PARA ADMINS (is_admin) ---
+    Route::middleware('is_admin')->group(function () {
+        Route::get('/stats', [StatsController::class, 'index']);
         
-        // 2. REGISTRAMOS EL ALIAS DE TU GUARDIA VIP AQUÍ
-        $middleware->alias([
-            'is_admin' => CheckAdmin::class
-        ]);
+        // El Admin puede gestionar todo
+        Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
+        Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
+        Route::apiResource('sanctions', SanctionController::class);
+        Route::apiResource('products', ProductController::class);
+        Route::apiResource('movements', MovementController::class);
+    });
 
-    })
-    ->withExceptions(function (Exceptions $exceptions) {
-        
-        // 1. EL ESCUDO PRINCIPAL: Atrapa el intento de redirección a "Login"
-        $exceptions->render(function (AuthenticationException $e, Request $request) {
-            // Si la ruta empieza con 'api/', siempre devolvemos JSON con error 401
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'No autorizado. El token es inválido, expiró o no fue enviado.'
-                ], 401);
-            }
-        });
+});
 
-        // 2. Escudos secundarios por si usamos JWT manualmente después
-        $exceptions->render(function (TokenInvalidException $e, Request $request) {
-            return response()->json(['success' => false, 'message' => 'Token inválido o modificado. Acceso denegado.'], 401);
-        });
-
-        $exceptions->render(function (TokenExpiredException $e, Request $request) {
-            return response()->json(['success' => false, 'message' => 'El token ha expirado. Por favor inicia sesión de nuevo.'], 401);
-        });
-
-        $exceptions->render(function (JWTException $e, Request $request) {
-            return response()->json(['success' => false, 'message' => 'Error procesando el Token de seguridad.'], 401);
-        });
-
-    })->create();
+// RUTA DE PRUEBA (Mantenla limpia, sin middlewares adentro)
+Route::get('/test-db', function () {
+    return response()->json(['status' => 'Conexión OK']);
+});
