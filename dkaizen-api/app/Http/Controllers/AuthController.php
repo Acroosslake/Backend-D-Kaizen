@@ -6,26 +6,26 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-// Método para crear una cuenta (Cliente / Admin)
+    // 1. REGISTRO MANUAL
     public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'sometimes|string|in:admin,barbero,cliente' // Permitimos que nos digan qué rol es
+            'role' => 'sometimes|string|in:admin,barbero,cliente'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'cliente' // Si no envían rol, es cliente por defecto
+            'role' => $request->role ?? 'cliente'
         ]);
-        
         
         $token = Auth::guard('api')->login($user);
 
@@ -37,7 +37,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // Método para Iniciar Sesión
+    // 2. LOGIN MANUAL
     public function login(Request $request)
     {
         $request->validate([
@@ -46,7 +46,6 @@ class AuthController extends Controller
         ]);
 
         $credentials = $request->only('email', 'password');
-
         $token = Auth::guard('api')->attempt($credentials);
 
         if (!$token) {
@@ -63,72 +62,62 @@ class AuthController extends Controller
         ]);
     }
 
-    // Método para Cerrar Sesión
+    // 3. LOGOUT
     public function logout()
     {
         Auth::guard('api')->logout();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sesión cerrada exitosamente'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Sesión cerrada']);
     }
 
-    // ----------------------------------------------------
-    // INICIO DE SESIÓN CON GOOGLE (Atajo VIP)
-    // ----------------------------------------------------
+    // 4. LOGIN CON GOOGLE (CONEXIÓN SEGURA)
     public function loginWithGoogle(Request $request)
     {
-        // 1. Exigimos que el frontend nos mande el token de Google
-        $request->validate([
-            'token' => 'required|string', 
-        ]);
+        $request->validate(['token' => 'required|string']);
 
         try {
-            // 2. Llamamos al guardia de Google para verificar el token
+            // Configuramos el cliente de Google
             $googleClient = new \Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]);
-            $payload = $googleClient->verifyIdToken($request->token);
+            $googleClient->setAccessToken($request->token);
+            
+            // Pedimos la info del usuario
+            $googleService = new \Google\Service\Oauth2($googleClient);
+            $userinfo = $googleService->userinfo->get();
 
-            if (!$payload) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'El token de Google es inválido o expiró.'
-                ], 401);
+            if (!$userinfo || !$userinfo->email) {
+                return response()->json(['success' => false, 'message' => 'No se pudo obtener info de Google.'], 401);
             }
 
-            // 3. Si Google dice que es real, sacamos sus datos
-            $email = $payload['email'];
-            $name = $payload['name'];
+            $email = $userinfo->email;
+            $name = $userinfo->name;
 
-            // 4. Buscamos si el tigre ya es cliente de la barbería
+            // Buscamos o creamos al usuario
             $user = User::where('email', $email)->first();
 
-            // Si es nuevo, lo registramos en automático
             if (!$user) {
                 $user = User::create([
                     'name' => $name,
                     'email' => $email,
-                    'password' => Hash::make(\Illuminate\Support\Str::random(16)), // Clave fantasma
-                    'role' => 'cliente' // Mantenemos tu rol por defecto
+                    'password' => Hash::make(Str::random(16)),
+                    'role' => 'cliente'
                 ]);
             }
 
-            // 5. ¡Le damos nuestra propia manilla VIP usando tu mismo método!
+            // Generamos tu token VIP
             $token = Auth::guard('api')->login($user);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Bienvenido, sesión iniciada con Google.',
+                'message' => 'Sesión iniciada con Google',
                 'token' => $token,
                 'user' => $user
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Error al validar con Google.', 
+                'success' => false,
+                'message' => 'Error al validar con Google.',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
-}
+} 

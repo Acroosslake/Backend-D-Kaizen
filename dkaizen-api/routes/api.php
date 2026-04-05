@@ -22,7 +22,6 @@ Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::apiResource('services', ServiceController::class)->only(['index', 'show']);
 Route::apiResource('barbers', BarberController::class)->only(['index', 'show']);
 
-
 // RUTAS PROTEGIDAS (Requieren Token VIP)
 Route::middleware('auth:api')->group(function () {
     
@@ -36,10 +35,33 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
     Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
 
-
     Route::apiResource('appointments', AppointmentController::class);
     Route::apiResource('feedback', FeedbackController::class);
     Route::apiResource('sanctions', SanctionController::class);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('movements', MovementController::class);
+
+}); // <--- AQUÍ SE CIERRA LA ZONA VIP PERFECTAMENTE
+
+// LA RUTA DE PRUEBA QUEDA AFUERA, TOTALMENTE PÚBLICA:
+Route::get('/crear-barbero-real', function () {
+    // 1. Creamos al usuario primero (si no existe)
+    $user = \App\Models\User::firstOrCreate(
+        ['email' => 'john.wick@dkaizen.com'],
+        ['name' => 'John Wick', 'password' => bcrypt('password123')]
+    );
+
+    // 2. Le creamos su perfil de barbero
+    $barber = \App\Models\Barber::firstOrCreate(
+        ['user_id' => $user->id],
+        [
+            'rh' => 'O+',
+            'eps' => 'Sura',
+            'contract_type' => 'fijo',
+            'entry_time' => '09:00',
+            'exit_time' => '19:00'
+        ]
+    );
+
+    return response()->json(['mensaje' => '¡Barbero real creado y vinculado a su usuario exitosamente!']);
 });
