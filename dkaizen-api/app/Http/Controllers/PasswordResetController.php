@@ -16,23 +16,39 @@ class PasswordResetController extends Controller
     public function sendResetLink(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email' // Validamos que el correo exista en la BD
+            'email' => 'required|email|exists:users,email'
         ]);
 
-        $token = Str::random(60); // Generamos el código secreto
+        $token = Str::random(60);
 
-        // Guardamos el token en la tabla que Laravel trae por defecto para esto
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],
             [
-                'email' => $request->email,
                 'token' => $token,
                 'created_at' => Carbon::now()
             ]
         );
 
+        // USAMOS LA URL DE TU FRONTEND EN CODESPACES (La misma que usas para entrar a la app)
+        // Agrégala a tu .env de Laravel como APP_FRONTEND_URL
+        $frontendUrl = env('APP_FRONTEND_URL', 'http://localhost:5173') . "/restablecer-contrasena?token=" . $token . "&email=" . $request->email;
+
+        // Cuerpo del mensaje un poco más "D'KAIZEN"
+        $mensaje = "Hola, bro.\n\nRecibimos una solicitud para cambiar tu contraseña en D'KAIZEN BARBER.\n\nHaz clic en el siguiente enlace para crear una nueva clave:\n\n" . $frontendUrl . "\n\nEste enlace expirará en 60 minutos.\n\nSi no solicitaste este cambio, puedes ignorar este correo.";
+
+        Mail::raw($mensaje, function ($message) use ($request) {
+            $message->to($request->email)
+                    ->subject('Restablece tu contraseña | D\'KAIZEN');
+        });
+
+        return response()->json([
+            'success' => true, 
+            'message' => '¡Enviado! Revisa tu Gmail, ahí están las instrucciones.'
+            ]
+        );
+
         // Simulamos la URL de tu futuro Frontend (ej: http://localhost:3000)
-        $frontendUrl = "http://localhost:3000/reset-password?token=" . $token . "&email=" . $request->email;
+        $frontendUrl = env('APP_FRONTEND_URL') . "/reset-password?token=" . $token . "&email=" . $request->email;
 
         // Enviamos el correo usando Mailtrap
         Mail::raw("Hola tigre,\n\nPara recuperar tu contraseña en la Barbería D-Kaizen, haz clic en el siguiente enlace:\n\n" . $frontendUrl . "\n\nSi no fuiste tú, ignora este correo de forma segura.", function ($message) use ($request) {
