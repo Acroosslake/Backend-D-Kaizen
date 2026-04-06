@@ -19,7 +19,6 @@ use App\Http\Controllers\StatsController;
 */
 
 // --- 1. RUTAS PÚBLICAS ---
-// Cualquiera puede ver servicios y barberos sin loguearse
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']); 
@@ -31,26 +30,22 @@ Route::get('/barbers', [BarberController::class, 'index']);
 
 
 // --- 2. ZONA PROTEGIDA CON JWT ---
-// Todo lo que esté aquí adentro requiere Token
 Route::middleware('auth:api')->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    // Ver mis propios datos
     Route::get('/me', function () {
         return response()->json(auth()->user());
     });
-
-    /**
-     * ✅ RUTA UNIVERSAL: ACTUALIZAR PERFIL
-     * Ubicada aquí para que Clientes, Barberos y Admins 
-     * puedan modificar su nombre y teléfono.
-     */
     Route::put('/user/update', [AuthController::class, 'updateProfile']);
 
+    // --- RUTA COMPARTIDA DE CITAS ---
+    // Como el método index() del controlador ya filtra por rol, 
+    // podemos usar esta misma ruta para el Admin y para el Cliente.
+    Route::get('/appointments', [AppointmentController::class, 'index']);
+    Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
+    Route::put('/appointments/{appointment}', [AppointmentController::class, 'update']);
 
     // --- SUB-ZONA: SOLO ADMINS ---
-    // El portero 'role:admin' solo vigila este bloque
     Route::middleware('role:admin')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
         
@@ -62,20 +57,20 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('sanctions', SanctionController::class);
         Route::apiResource('movements', MovementController::class);
         Route::apiResource('products', ProductController::class)->except(['index']);
+
+        // Si prefieres una ruta específica para que el Front del Admin sea más claro:
+        Route::get('/admin/appointments', [AppointmentController::class, 'index']);
     });
 
 
     // --- SUB-ZONA: SOLO CLIENTES ---
     Route::middleware('role:client')->group(function () {
-        Route::get('/mis-citas', [AppointmentController::class, 'index']);
         Route::post('/appointments', [AppointmentController::class, 'store']);
         Route::post('/feedback', [FeedbackController::class, 'store']);
     });
 
 
-    // --- RUTAS COMPARTIDAS ADICIONALES ---
-    // Ambos roles pueden ver productos y detalles de citas
+    // --- OTRAS RUTAS COMPARTIDAS ---
     Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
 
-});
+}); // <-- Cierre del grupo auth:api
