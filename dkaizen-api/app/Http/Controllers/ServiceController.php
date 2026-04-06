@@ -1,60 +1,42 @@
-<?php
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'name'        => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'price'       => 'required|numeric|min:0',
+        'duration'    => 'required|integer', 
+        'status'      => 'boolean', // 👈 Validamos como booleano
+        'image'       => 'nullable|string', 
+    ]);
 
-namespace App\Http\Controllers\Api;
+    // Si no envían el status, por defecto lo ponemos en true (activo)
+    $data = array_merge($validated, ['status' => $request->get('status', true)]);
 
-use App\Http\Controllers\Controller;
-use App\Models\Service; 
-use Illuminate\Http\Request;
-
-class ServiceController extends Controller
-
-
-{   //GET: Lista todos los servicios
-    public function index()
-    {
-        return response()->json(Service::all(), 200);
-    }
-
-        //POST: Crea un nuevo servicio
-    public function store(Request $request)
-    {
-        // Validación básica profesional
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'duration' => 'required|integer', // duración en minutos
-        ]);
-
-        $service = Service::create($validated);
-        return response()->json([
-            'message' => 'Servicio creado con éxito',
-            'data' => $service
-        ], 21);
-    }
-     //GET: Muestra un solo servicio por su ID
-    public function show(string $id)
-    {
-        $service = Service::find($id);
-        if (!$service) {
-            return response()->json(['message' => 'Servicio no encontrado'], 404);
-        }
-        return response()->json($service, 200);
-    }
-    }
+    $service = Service::create($data);
     
-    //PUT/PATCH: Actualiza un servicio
-    public function update(Request $request, string $id)
-    {
-        $service = Service::findOrFail($id);
-        $service->update($request->all());
-        return response()->json(['message' => 'Servicio actualizado', 'data' => $service], 200);
-    }
+    return response()->json([
+        'success' => true,
+        'data'    => $service
+    ], 201); 
+}
 
-      // DELETE: Borra un servicio
-    public function destroy(string $id)
-    {
-        Service::findOrFail($id)->delete();
-        return response()->json(['message' => 'Servicio eliminado'], 200);
-    }
+public function update(Request $request, string $id)
+{
+    $service = Service::findOrFail($id);
+    
+    $validated = $request->validate([
+        'name'        => 'sometimes|string|max:255',
+        'description' => 'nullable|string',
+        'price'       => 'sometimes|numeric|min:0',
+        'duration'    => 'sometimes|integer',
+        'status'      => 'sometimes|boolean', // 👈 Para poder apagar/encender
+        'image'       => 'sometimes|string',
+    ]);
+
+    $service->update($validated);
+    
+    return response()->json([
+        'success' => true,
+        'data'    => $service
+    ], 200);
 }

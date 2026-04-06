@@ -40,6 +40,7 @@ Route::middleware('auth:api')->group(function () {
     // --- SUB-ZONA: SOLO ADMINS ---
     Route::middleware('role:admin')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
+        Route::put('/user/update', [AuthController::class, 'updateProfile']);
         
         // Gestión de Barberos y Servicios
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);

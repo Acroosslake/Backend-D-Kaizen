@@ -21,10 +21,10 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-    'name' => $request->name,
-    'email' => $request->email,
-    'password' => Hash::make($request->password),
-    'role' => 'client'
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'client' // Por seguridad, siempre entran como clientes
         ]);
         
         $token = Auth::guard('api')->login($user);
@@ -69,17 +69,15 @@ class AuthController extends Controller
         return response()->json(['success' => true, 'message' => 'Sesión cerrada']);
     }
 
-    // 4. LOGIN CON GOOGLE (CONEXIÓN SEGURA)
+    // 4. LOGIN CON GOOGLE
     public function loginWithGoogle(Request $request)
     {
         $request->validate(['token' => 'required|string']);
 
         try {
-            // Configuramos el cliente de Google
             $googleClient = new \Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]);
             $googleClient->setAccessToken($request->token);
             
-            // Pedimos la info del usuario
             $googleService = new \Google\Service\Oauth2($googleClient);
             $userinfo = $googleService->userinfo->get();
 
@@ -87,22 +85,17 @@ class AuthController extends Controller
                 return response()->json(['success' => false, 'message' => 'No se pudo obtener info de Google.'], 401);
             }
 
-            $email = $userinfo->email;
-            $name = $userinfo->name;
-
-            // Buscamos o creamos al usuario
-            $user = User::where('email', $email)->first();
+            $user = User::where('email', $userinfo->email)->first();
 
             if (!$user) {
                 $user = User::create([
-                    'name' => $name,
-                    'email' => $email,
+                    'name' => $userinfo->name,
+                    'email' => $userinfo->email,
                     'password' => Hash::make(Str::random(16)),
                     'role' => 'client'
                 ]);
             }
 
-            // Generamos tu token VIP
             $token = Auth::guard('api')->login($user);
 
             return response()->json([
@@ -120,4 +113,31 @@ class AuthController extends Controller
             ], 500);
         }
     }
-} 
+
+    // 5. ACTUALIZAR PERFIL (Ahora sí, fuera del catch)
+    public function updateProfile(Request $request)
+    {
+        // Obtenemos al usuario autenticado
+        $user = Auth::guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 401);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'phone' => $request->phone,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => '¡Perfil actualizado con éxito, fiera!',
+            'user' => $user
+        ]);
+    }
+}

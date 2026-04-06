@@ -14,7 +14,8 @@ class Service extends Model
         'description',
         'duration',
         'price',
-        'status'
+        'status',
+        'image'
     ];
     // Un servicio puede tener MUCHAS citas
     public function appointments()
