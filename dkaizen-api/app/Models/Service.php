@@ -16,8 +16,12 @@ class Service extends Model
         'price',
         'status',
         'image'
+    ]; // ✅ Asegúrate de que termine así
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
-    // Un servicio puede tener MUCHAS citas
+
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
