@@ -5,19 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject; 
-use App\Notifications\CustomResetPassword;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject; // 👈 ¡OJO! Esto es vital para JWT
 
-class User extends Authenticatable implements JWTSubject 
+class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
+    /**
+     * Los atributos que se pueden asignar de forma masiva.
+     * Si 'phone' o 'role' no están aquí, Laravel dará error o los ignorará.
+     */
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'phone', 'birth_date', 'pathologies'
+        'name',
+        'email',
+        'password',
+        'role',   // 👈 Asegúrate de que esté
+        'phone',  // 👈 ¡ESTE ES EL QUE NECESITAMOS PARA EL PERFIL!
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
     ];
 
     protected function casts(): array
@@ -28,7 +36,7 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    //Métodos requeridos por JWT ---
+    // --- MÉTODOS OBLIGATORIOS PARA JWT ---
 
     public function getJWTIdentifier()
     {
@@ -37,32 +45,9 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims()
     {
-        // Guardamos el rol en el token para que React sepa si eres Admin o Cliente
+        // Esto añade el rol al token para que el backend lo reconozca rápido
         return [
             'role' => $this->role,
         ];
     }
-    
-    // Un usuario puede tener MUCHAS citas
-    public function appointments()
-    {
-        return $this->hasMany(Appointment::class);
-    }
-    
-
-    // Un usuario puede dejar MUCHOS feedbacks
-    public function feedbacks()
-    {
-        return $this->hasMany(Feedback::class);
-    }
-
-    // Un usuario puede tener MUCHAS sanciones
-    public function sanctions()
-    {
-        return $this->hasMany(Sanction::class);
-    }
-    public function sendPasswordResetNotification($token)
-{
-    $this->notify(new CustomResetPassword($token));
-}
 }

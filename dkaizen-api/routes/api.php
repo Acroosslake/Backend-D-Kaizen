@@ -19,6 +19,7 @@ use App\Http\Controllers\StatsController;
 */
 
 // --- 1. RUTAS PÚBLICAS ---
+// Cualquiera puede ver servicios y barberos sin loguearse
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']); 
@@ -30,19 +31,30 @@ Route::get('/barbers', [BarberController::class, 'index']);
 
 
 // --- 2. ZONA PROTEGIDA CON JWT ---
+// Todo lo que esté aquí adentro requiere Token
 Route::middleware('auth:api')->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // Ver mis propios datos
     Route::get('/me', function () {
         return response()->json(auth()->user());
     });
 
+    /**
+     * ✅ RUTA UNIVERSAL: ACTUALIZAR PERFIL
+     * Ubicada aquí para que Clientes, Barberos y Admins 
+     * puedan modificar su nombre y teléfono.
+     */
+    Route::put('/user/update', [AuthController::class, 'updateProfile']);
+
+
     // --- SUB-ZONA: SOLO ADMINS ---
+    // El portero 'role:admin' solo vigila este bloque
     Route::middleware('role:admin')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
-        Route::put('/user/update', [AuthController::class, 'updateProfile']);
         
-        // Gestión de Barberos y Servicios
+        // Gestión de Barberos y Servicios (CRUD completo)
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
         
@@ -52,16 +64,17 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('products', ProductController::class)->except(['index']);
     });
 
+
     // --- SUB-ZONA: SOLO CLIENTES ---
-    // Unificamos todo en 'client' para que no haya choques
     Route::middleware('role:client')->group(function () {
         Route::get('/mis-citas', [AppointmentController::class, 'index']);
         Route::post('/appointments', [AppointmentController::class, 'store']);
         Route::post('/feedback', [FeedbackController::class, 'store']);
     });
 
-    // --- RUTAS COMPARTIDAS (Ambos roles) ---
-    // Estas quedan dentro de 'auth:api' pero fuera de los grupos específicos
+
+    // --- RUTAS COMPARTIDAS ADICIONALES ---
+    // Ambos roles pueden ver productos y detalles de citas
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
 
