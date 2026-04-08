@@ -38,12 +38,11 @@ Route::middleware('auth:api')->group(function () {
     });
     Route::put('/user/update', [AuthController::class, 'updateProfile']);
 
-    // --- RUTA COMPARTIDA DE CITAS ---
-    // Como el método index() del controlador ya filtra por rol, 
-    // podemos usar esta misma ruta para el Admin y para el Cliente.
+    // --- RUTAS DE CITAS (COMPARTIDAS) ---
     Route::get('/appointments', [AppointmentController::class, 'index']);
     Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
     Route::put('/appointments/{appointment}', [AppointmentController::class, 'update']);
+
 
     // --- SUB-ZONA: SOLO ADMINS ---
     Route::middleware('role:admin')->group(function () {
@@ -53,12 +52,15 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
         
+        // Ruta para cargar usuarios que aún no son barberos (Panel Staff)
+        Route::get('/available-users', [BarberController::class, 'availableUsers']);
+
         // Gestión de inventario y disciplina
         Route::apiResource('sanctions', SanctionController::class);
         Route::apiResource('movements', MovementController::class);
         Route::apiResource('products', ProductController::class)->except(['index']);
 
-        // Si prefieres una ruta específica para que el Front del Admin sea más claro:
+        // Ruta específica para la agenda completa del admin
         Route::get('/admin/appointments', [AppointmentController::class, 'index']);
     });
 

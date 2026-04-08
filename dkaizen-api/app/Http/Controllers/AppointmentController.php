@@ -3,43 +3,59 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Barber; // Asegúrate de importar Barber
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AppointmentController extends Controller
 {
     /**
-     * 1. LISTAR CITAS (Inteligente: Filtra por Rol)
+     * 1. LISTAR CITAS (Filtra por Rol y por Barbero)
      */
-    public function index()
+    public function index(Request $request) // Añade Request para leer los filtros
     {
         $user = auth('api')->user();
 
-        // Iniciamos la consulta con las relaciones necesarias
+        // Iniciamos la consulta base
         $query = Appointment::with(['user', 'service', 'barber.user']);
 
+        // FILTRO DE SEGURIDAD POR ROL
         if ($user->role === 'admin') {
-            // El admin ve TODO el panorama de D'Kaizen
-            $appointments = $query->orderBy('appointment_date', 'desc')->get();
+            // El admin ve todo, pero aquí podemos aplicar filtros adicionales
+            // si el Admin quiere ver la agenda de UN barbero específico.
+        } elseif ($user->role === 'barber') {
+            // El barbero solo ve sus propias citas.
+            // Para esto necesitamos saber cuál es el barber_id asociado al user_id
+            $barber = $user->barber;
+            if (!$barber) {
+                return response()->json(['message' => 'Tu usuario no está vinculado a una barbería.'], 403);
+            }
+            $query->where('barber_id', $barber->id);
         } else {
-            // El cliente SOLO ve su historial personal
-            $appointments = $query->where('user_id', $user->id)
-                                  ->orderBy('appointment_date', 'desc')
-                                  ->get();
+            // El cliente solo ve sus propias citas
+            $query->where('user_id', $user->id);
         }
+
+        // NUEVO FILTRO PARA LA VISTA DEL ADMIN (Ver citas de un barbero específico)
+        if ($request->has('barber_id')) {
+            $query->where('barber_id', $request->barber_id);
+        }
+
+        // Ordenamos y obtenemos los datos
+        $appointments = $query->orderBy('appointment_date', 'desc')->get();
 
         return response()->json($appointments);
     }
 
     /**
-     * 2. CREAR CITA
+     * 2. CREAR CITA (No cambia)
      */
     public function store(Request $request)
     {
         $request->validate([
             'service_id'       => 'required|exists:services,id',
             'barber_id'        => 'required|exists:barbers,id',
-            'appointment_date' => 'required|date|after:now', // Sin viajes al pasado
+            'appointment_date' => 'required|date|after:now',
             'notes'            => 'nullable|string|max:500',
         ]);
 
@@ -56,13 +72,13 @@ class AppointmentController extends Controller
         
         return response()->json([
             'success' => true,
-            'message' => '¡Cita reservada con éxito en D\'Kaizen!',
+            'message' => '¡Tu cita ha sido reservada con éxito en D\'Kaizen!',
             'data'    => $appointment
         ], 201);
     }
 
     /**
-     * 3. VER DETALLE (Con protección)
+     * 3. VER DETALLE (No cambia)
      */
     public function show($id)
     {
@@ -82,8 +98,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 4. ACTUALIZAR (Lógica de Admin vs Cliente)
-     * Aquí es donde el botón "Completar" hace su magia.
+     * 4. ACTUALIZAR (No cambia, el admin puede cambiar el status a 'completed')
      */
     public function update(Request $request, $id)
     {
@@ -95,20 +110,18 @@ class AppointmentController extends Controller
 
         $user = auth('api')->user();
 
-        // Seguridad: ¿Es el dueño o es el Admin?
         if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
             return response()->json(['message' => 'No tienes permiso.'], 403);
         }
 
         if ($user->role !== 'admin') {
-            // El cliente solo cambia fecha o notas
             $request->validate([
                 'appointment_date' => 'sometimes|date|after:now',
                 'notes'            => 'nullable|string',
             ]);
             $appointment->update($request->only(['appointment_date', 'notes']));
         } else {
-            // El admin puede cambiar todo (incluyendo status: 'completed', 'canceled')
+            // El admin puede cambiar el status a 'completed' (visto en imagen 5 y 6)
             $appointment->update($request->all());
         }
         
@@ -120,7 +133,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 5. ELIMINAR
+     * 5. ELIMINAR (No cambia)
      */
     public function destroy($id)
     {
@@ -133,7 +146,7 @@ class AppointmentController extends Controller
         $user = auth('api')->user();
 
         if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
-            return response()->json(['message' => 'No puedes eliminar esta cita.'], 403);
+            return response()->json(['message' => 'No puedes cancelar esta cita.'], 403);
         }
 
         $appointment->delete();
