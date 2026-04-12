@@ -11,6 +11,7 @@ use App\Http\Controllers\MovementController;
 use App\Http\Controllers\SanctionController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\UserController; // ✅ IMPORTANTE: Agregamos el nuevo controlador
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,10 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
         
+        // 🛡️ GESTIÓN TOTAL DE USUARIOS (Lo nuevo)
+        // Esto permite Ver, Crear, Editar y Eliminar cualquier usuario del sistema
+        Route::apiResource('users', UserController::class);
+        
         // Gestión de Barberos y Servicios (CRUD completo)
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
@@ -75,4 +80,4 @@ Route::middleware('auth:api')->group(function () {
     // --- OTRAS RUTAS COMPARTIDAS ---
     Route::get('/products', [ProductController::class, 'index']);
 
-}); // <-- Cierre del grupo auth:api
+});
