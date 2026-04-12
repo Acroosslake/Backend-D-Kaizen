@@ -14,7 +14,7 @@ use App\Http\Controllers\StatsController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes - D'KAIZEN BARBER (JWT Edition)
+| API Routes - D'KAIZEN BARBER (JWT Edition )
 |--------------------------------------------------------------------------
 */
 
