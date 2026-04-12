@@ -9,21 +9,23 @@ class Barber extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'specialty',
-        'status',
-        'image',
-        'rh',
-        'eps',
-        'contract_type',
-        'entry_time',
-        'exit_time'
-    ]; // ✅ Asegúrate de que termine así
+protected $fillable = [
+    'user_id',
+    'specialty',
+    'status',
+    'email', 
+    'phone', 
+    'image',
+    'rh',
+    'eps',
+    'contract_type',
+    'entry_time',
+    'exit_time'
+];
 
-    protected $casts = [
-        'status' => 'boolean',
-    ];
+protected $casts = [
+    'status' => 'boolean',
+];
 
     public function user()
     {

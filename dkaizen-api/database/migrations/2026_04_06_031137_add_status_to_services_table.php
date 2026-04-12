@@ -9,20 +9,25 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-public function up(): void
-{
-    Schema::table('services', function (Blueprint $table) {
-        $table->boolean('status')->default(true)->after('price');
-    });
-}
+    public function up(): void
+    {
+        // Verificamos si la columna 'status' NO existe antes de crearla
+        if (!Schema::hasColumn('services', 'status')) {
+            Schema::table('services', function (Blueprint $table) {
+                $table->boolean('status')->default(true);
+            });
+        }
+    }
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::table('services', function (Blueprint $table) {
-            //
-        });
+        if (Schema::hasColumn('services', 'status')) {
+            Schema::table('services', function (Blueprint $table) {
+                $table->dropColumn('status');
+            });
+        }
     }
 };
