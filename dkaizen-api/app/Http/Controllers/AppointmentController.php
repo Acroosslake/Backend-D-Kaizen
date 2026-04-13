@@ -8,6 +8,7 @@ use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class AppointmentController extends Controller
 {
@@ -37,7 +38,31 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 2. CREAR CITA (Captura el precio actual para el Dashboard)
+     * 2. DISPONIBILIDAD REAL (Evita choques de horarios)
+     * Este es el que llamaremos desde Reservas.jsx
+     */
+    public function getOccupiedSlots(Request $request)
+    {
+        $request->validate([
+            'barber_id' => 'required|exists:barbers,id',
+            'date'      => 'required|date_format:Y-m-d'
+        ]);
+
+        // Buscamos citas que no estén canceladas para ese barbero y ese día
+        $occupied = Appointment::where('barber_id', $request->barber_id)
+            ->whereDate('appointment_date', $request->date)
+            ->whereNotIn('status', ['cancelled', 'no-show'])
+            ->get()
+            ->map(function($app) {
+                // Devolvemos solo la hora en formato HH:mm (ej: 14:00)
+                return Carbon::parse($app->appointment_date)->format('H:i');
+            });
+
+        return response()->json($occupied);
+    }
+
+    /**
+     * 3. CREAR CITA (Con validación de choque de horario)
      */
     public function store(Request $request)
     {
@@ -48,6 +73,19 @@ class AppointmentController extends Controller
             'notes'            => 'nullable|string|max:500',
         ]);
 
+        // 🛡️ VALIDACIÓN CRÍTICA: ¿El barbero ya tiene alguien a esa misma hora?
+        $exists = Appointment::where('barber_id', $request->barber_id)
+            ->where('appointment_date', $request->appointment_date)
+            ->whereNotIn('status', ['cancelled', 'no-show'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este horario acaba de ser tomado por otro cliente. Por favor elige otro.'
+            ], 422);
+        }
+
         $service = Service::findOrFail($request->service_id);
 
         $appointment = Appointment::create([
@@ -55,7 +93,7 @@ class AppointmentController extends Controller
             'service_id'       => $request->service_id,
             'barber_id'        => $request->barber_id,
             'appointment_date' => $request->appointment_date,
-            'total_price'      => $service->price, // ✅ Precio congelado al momento de reservar
+            'total_price'      => $service->price, 
             'notes'            => $request->notes,
             'status'           => 'pending', 
         ]);
@@ -68,7 +106,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 3. VER DETALLE
+     * 4. VER DETALLE
      */
     public function show($id)
     {
@@ -83,32 +121,29 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 4. ACTUALIZAR (Sincronización crítica de Ingresos)
+     * 5. ACTUALIZAR (Sincronización de Ingresos)
      */
     public function update(Request $request, $id)
     {
         $appointment = Appointment::with('service')->findOrFail($id);
         $user = auth('api')->user();
 
-        // 🛡️ Seguridad básica
         if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
             return response()->json(['message' => 'No tienes permiso.'], 403);
         }
 
-        // Lógica de Admin: Completar o cancelar
         if ($user->role === 'admin') {
-            // ✅ Si se completa, nos aseguramos que el precio esté actualizado para las Stats
             if ($request->status === 'completed') {
                 $appointment->total_price = $appointment->service->price;
             }
             $appointment->update($request->all());
         } else {
-            // Lógica de Cliente: Solo fecha y notas
             $request->validate([
                 'appointment_date' => 'sometimes|date|after:now',
                 'notes'            => 'nullable|string',
+                'status'           => 'sometimes|string|in:cancelled' // Permitir al cliente cancelar
             ]);
-            $appointment->update($request->only(['appointment_date', 'notes']));
+            $appointment->update($request->only(['appointment_date', 'notes', 'status']));
         }
         
         return response()->json([
@@ -119,56 +154,43 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 5. NO ASISTIÓ (Cita + Multa en una sola acción)
+     * 6. NO ASISTIÓ
      */
-public function noShow(Request $request, $id)
-{
-    try {
-        // 1. Buscamos la cita. Usamos findOrFail para que si no existe de un error claro.
-        $appointment = Appointment::with('user')->findOrFail($id);
+    public function noShow(Request $request, $id)
+    {
+        try {
+            $appointment = Appointment::with('user')->findOrFail($id);
+            $appointment->status = 'no-show';
+            $appointment->save();
 
-        // 2. Cambiamos el estado de la cita
-        $appointment->status = 'no-show';
-        $appointment->save();
+            if ($appointment->user) {
+                $user = $appointment->user;
+                $montoMulta = (float) $request->input('penalty_fee', 0);
+                $deudaActual = (float) ($user->penalty_fee ?? 0);
 
-        // 3. Aplicamos la multa al usuario vinculado
-        if ($appointment->user) {
-            $user = $appointment->user;
-            
-            // Convertimos a float para asegurar que la suma matemática sea correcta
-            $montoMulta = (float) $request->input('penalty_fee', 0);
-            $deudaActual = (float) ($user->penalty_fee ?? 0);
-
-            if ($montoMulta > 0) {
-                $user->penalty_fee = $deudaActual + $montoMulta;
-                $user->save();
+                if ($montoMulta > 0) {
+                    $user->penalty_fee = $deudaActual + $montoMulta;
+                    $user->save();
+                }
             }
+
+            return response()->json(['success' => true, 'message' => 'Multa aplicada.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Inasistencia procesada y multa aplicada.'
-        ]);
-
-    } catch (\Exception $e) {
-        // ⚠️ Si falla, esto nos devolverá el error real en la consola de Chrome
-        return response()->json([
-            'success' => false,
-            'message' => 'Error interno: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     /**
-     * 6. ELIMINAR
+     * 7. ELIMINAR / CANCELAR
      */
     public function destroy($id)
     {
         $appointment = Appointment::findOrFail($id);
         $user = auth('api')->user();
 
+        // Solo el dueño o el admin pueden borrar
         if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
-            return response()->json(['message' => 'No puedes cancelar esta cita.'], 403);
+            return response()->json(['message' => 'No autorizado.'], 403);
         }
 
         $appointment->delete();

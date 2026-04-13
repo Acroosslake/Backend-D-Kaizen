@@ -15,14 +15,15 @@ use App\Http\Controllers\UserController;
 |--------------------------------------------------------------------------
 */
 
-// --- 1. RUTAS PÚBLICAS ---
+// --- 1. RUTAS PÚBLICAS (Sin candado) ---
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
-Route::get('/services', [ServiceController::class, 'index']); // Para que el cliente vea los precios
+Route::get('/services', [ServiceController::class, 'index']); 
 Route::get('/barbers', [BarberController::class, 'index']);
+Route::get('/appointments/occupied', [AppointmentController::class, 'getOccupiedSlots']); // ✅ Esta está perfecta aquí para el radar de horas
 
-// --- 2. ZONA PROTEGIDA CON JWT ---
+// --- 2. ZONA PROTEGIDA CON JWT (Solo gente logueada) ---
 Route::middleware('auth:api')->group(function () {
     
     Route::get('/me', function () { return response()->json(auth()->user()); });
@@ -37,11 +38,10 @@ Route::middleware('auth:api')->group(function () {
         Route::put('/appointments/{id}/no-show', [AppointmentController::class, 'noShow']); 
         Route::get('/admin/appointments', [AppointmentController::class, 'index']);
         
-        // 🛠️ Gestión de Servicios (CRUD Completo para el Admin)
-        // Esto permite crear los combos y cortes que el cliente verá
+        // 🛠️ Gestión de Servicios
         Route::apiResource('services', ServiceController::class)->except(['index']);
         
-        // 📦 Gestión de Inventario (Almacén)
+        // 📦 Gestión de Inventario
         Route::apiResource('products', ProductController::class)->except(['index']);
         
         // Staff & Disponibilidad
@@ -54,7 +54,12 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
     });
 
-    // --- RUTAS COMPARTIDAS (Auth requerida) ---
+    // --- RUTAS COMPARTIDAS (Auth requerida para ambos roles) ---
     Route::get('/appointments', [AppointmentController::class, 'index']);
+    
+    // ✅ AQUÍ VAN LAS DE ACTUALIZAR Y CANCELAR
+    Route::put('/appointments/{id}', [AppointmentController::class, 'update']);
+    Route::delete('/appointments/{id}', [AppointmentController::class, 'destroy']);
+    
     Route::get('/products', [ProductController::class, 'index']); // Ambos ven el stock
 });
