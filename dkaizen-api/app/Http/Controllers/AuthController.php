@@ -16,7 +16,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8', // Subimos el mínimo a 8
             'role' => 'sometimes|string|in:admin,barbero,client'
         ]);
 
@@ -27,13 +27,14 @@ class AuthController extends Controller
             'role' => 'client' // Por seguridad, siempre entran como clientes
         ]);
         
-        $token = Auth::guard('api')->login($user);
+        // 🔥 MAGIA: Enviar correo de verificación
+        $user->sendEmailVerificationNotification();
 
+        // 🛑 YA NO iniciamos sesión aquí ni devolvemos el Token.
+        // Así los obligamos a ir a revisar su correo.
         return response()->json([
             'success' => true,
-            'message' => 'Usuario creado exitosamente',
-            'token' => $token,
-            'user' => $user
+            'message' => 'Usuario creado exitosamente. Por favor verifica tu correo.'
         ], 201);
     }
 
@@ -55,10 +56,23 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $user = Auth::guard('api')->user();
+
+        // 🛡️ BARRERA DE SEGURIDAD: Comprobar si ya verificó el correo
+        if (!$user->hasVerifiedEmail()) {
+            // Cerramos la sesión que se intentó abrir
+            Auth::guard('api')->logout(); 
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada o Spam.',
+            ], 403); // 403 significa Prohibido
+        }
+
         return response()->json([
             'success' => true,
             'token' => $token,
-            'user' => Auth::guard('api')->user()
+            'user' => $user
         ]);
     }
 
@@ -92,7 +106,8 @@ class AuthController extends Controller
                     'name' => $userinfo->name,
                     'email' => $userinfo->email,
                     'password' => Hash::make(Str::random(16)),
-                    'role' => 'client'
+                    'role' => 'client',
+                    'email_verified_at' => now() // ✅ Si entra con Google, asumimos que el correo es real y lo verificamos de una.
                 ]);
             }
 
@@ -114,10 +129,9 @@ class AuthController extends Controller
         }
     }
 
-    // 5. ACTUALIZAR PERFIL (Ahora sí, fuera del catch)
+    // 5. ACTUALIZAR PERFIL
     public function updateProfile(Request $request)
     {
-        // Obtenemos al usuario autenticado
         $user = Auth::guard('api')->user();
 
         if (!$user) {

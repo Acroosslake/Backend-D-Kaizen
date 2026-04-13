@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail; // ✅ 1. Importamos la interfaz de verificación
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject; // 👈 ¡OJO! Esto es vital para JWT
 
-class User extends Authenticatable implements JWTSubject
+// ✅ 2. Le decimos a Laravel que este usuario debe verificar su correo
+class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -19,7 +21,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
-        'role',   // 
+        'role',   
         'phone',
         'penalty_fee',  
     ];

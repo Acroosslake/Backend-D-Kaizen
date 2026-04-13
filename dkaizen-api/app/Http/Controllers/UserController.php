@@ -23,7 +23,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         // 🛡️ SEGURIDAD: No permitir que el admin se quite el rango a sí mismo
-        if (auth()->id() == $id && $request->role !== 'admin') {
+        if (auth('api')->id() == $id && $request->role !== 'admin') {
             return response()->json([
                 'message' => 'No puedes quitarte el rango de Admin a ti mismo. Alguien debe mantener el orden.'
             ], 403);
@@ -36,7 +36,6 @@ class UserController extends Controller
 
         // 2. Actualizamos los datos básicos
         $user->update($request->only(['name', 'email', 'role']));
-
 
         // Si el rol cambió a 'barber', creamos automáticamente su perfil en la tabla de staff
         if ($user->role === 'barber' && $oldRole !== 'barber') {
@@ -66,23 +65,34 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        // 🛡️ SEGURIDAD: No permitir que el admin se borre a sí mismo
-        if (auth()->id() == $id) {
+        // 1. Buscamos al usuario manualmente por su ID
+        $user = User::find($id);
+
+        // 2. Si no existe (o ya fue borrado), devolvemos un mensaje limpio
+        if (!$user) {
             return response()->json([
-                'message' => 'No puedes eliminar tu propia cuenta, fiera. El sistema necesita al menos un admin.'
+                'success' => false,
+                'message' => 'El usuario no existe o ya fue eliminado previamente.'
+            ], 404);
+        }
+
+        // 3. Evitar que el admin se borre a sí mismo
+        if (auth('api')->id() == $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No puedes eliminar tu propia cuenta desde aquí.'
             ], 403);
         }
 
-        $user = User::findOrFail($id);
-        
-        // Opcional: Si el usuario era barbero, podrías borrar su perfil de barbero también
-        // Barber::where('user_id', $id)->delete();
+        // (Opcional) Limpiar perfil de barbero si lo tenía para no dejar basura en la BD
+        Barber::where('user_id', $id)->delete();
 
+        // 4. Lo eliminamos de verdad
         $user->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Usuario eliminado correctamente'
+            'message' => 'Usuario eliminado con éxito de la plataforma.'
         ]);
     }
 }
