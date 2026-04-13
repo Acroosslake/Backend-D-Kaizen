@@ -4,62 +4,60 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Appointment;
-use App\Models\Sanction;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class StatsController extends Controller
 {
-    public function index()
-    {
-        $hoy = Carbon::today();
+public function index()
+{
+    try {
+        // Forzamos zona horaria de Colombia para que "Hoy" sea real
+        $hoy = \Carbon\Carbon::now('-05:00')->format('Y-m-d');
 
-        // 1. Ingresos de hoy (Suma de precios de citas completadas)
-        $ingresosHoy = Appointment::whereDate('date', $hoy)
+        // 1. Ingresos Diarios (Usamos 'appointment_date')
+        $ingresosHoy = Appointment::whereDate('appointment_date', $hoy)
             ->where('status', 'completed')
-            ->sum('total_price');
+            ->sum('total_price') ?? 0;
 
-        // 2. Citas Activas (Pendientes o confirmadas para hoy)
-        $citasActivas = Appointment::whereDate('date', $hoy)
+        // 2. Ingresos Mensuales
+        $ingresosMes = Appointment::whereMonth('appointment_date', date('m'))
+            ->whereYear('appointment_date', date('Y'))
+            ->where('status', 'completed')
+            ->sum('total_price') ?? 0;
+
+        // 3. Citas Activas
+        $citasActivas = Appointment::whereDate('appointment_date', $hoy)
             ->whereIn('status', ['pending', 'confirmed'])
             ->count();
 
-        // 3. Alertas (Sanciones activas)
-        $alertas = Sanction::where('status', 'active')->count();
-
-        // 4. Últimos Movimientos (Citas recientes con nombres)
-        $movimientos = Appointment::with(['user', 'barber.user'])
+        // 4. Movimientos
+        $movimientos = Appointment::with(['user', 'service', 'barber.user'])
             ->latest()
-            ->take(3)
+            ->take(5)
             ->get()
             ->map(function($a) {
                 return [
                     'id' => $a->id,
-                    'corte' => "Servicio de Barbería", // O $a->service->name si tienes la relación
-                    'cliente' => $a->user->name,
+                    'corte' => $a->service->name ?? "Servicio",
+                    'cliente' => $a->user->name ?? 'Cliente',
                     'barber' => $a->barber->user->name ?? 'Staff',
-                    'precio' => '$' . number_format($a->total_price),
-                    'hora' => $a->created_at->diffForHumans()
+                    'precio' => '$' . number_format($a->total_price ?? 0),
+                    'hora' => $a->created_at ? $a->created_at->diffForHumans() : 'Reciente'
                 ];
             });
 
-        // 5. Data para la Gráfica (Últimos 7 días)
-        $grafica = Appointment::select(
-                DB::raw('DATE(date) as fecha'),
-                DB::raw('SUM(total_price) as total')
-            )
-            ->where('date', '>=', Carbon::now()->subDays(6))
-            ->where('status', 'completed')
-            ->groupBy('fecha')
-            ->orderBy('fecha')
-            ->get();
-
         return response()->json([
-            'ingresos' => $ingresosHoy,
+            'ingresos' => (float)$ingresosHoy,
+            'ingresosMes' => (float)$ingresosMes,
             'citas' => $citasActivas,
-            'alertas' => $alertas,
             'movimientos' => $movimientos,
-            'grafica' => $grafica
+            'grafica' => [] 
         ]);
+
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
 }

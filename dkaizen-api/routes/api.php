@@ -45,29 +45,30 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/appointments/{appointment}', [AppointmentController::class, 'update']);
 
 
-    // --- SUB-ZONA: SOLO ADMINS ---
-    Route::middleware('role:admin')->group(function () {
-        Route::get('/stats', [StatsController::class, 'index']);
-        
-        // 🛡️ GESTIÓN TOTAL DE USUARIOS (Lo nuevo)
-        // Esto permite Ver, Crear, Editar y Eliminar cualquier usuario del sistema
-        Route::apiResource('users', UserController::class);
-        
-        // Gestión de Barberos y Servicios (CRUD completo)
-        Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
-        Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
-        
-        // Ruta para cargar usuarios que aún no son barberos (Panel Staff)
-        Route::get('/available-users', [BarberController::class, 'availableUsers']);
+// --- SUB-ZONA: SOLO ADMINS ---
+Route::middleware('role:admin')->group(function () {
+    Route::get('/stats', [StatsController::class, 'index']);
+    
+    // 🛡️ GESTIÓN TOTAL DE USUARIOS
+    Route::apiResource('users', UserController::class);
+    
+    // ✂️ GESTIÓN DE CITAS (IMPORTANTE: La ruta específica va ANTES del resource si existiera)
+    Route::put('/appointments/{id}/no-show', [AppointmentController::class, 'noShow']); 
+    
+    // Gestión de Barberos y Servicios
+    Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
+    Route::apiResource('barbers', BarberController::class)->except(['index', 'show']);
+    
+    Route::get('/available-users', [BarberController::class, 'availableUsers']);
 
-        // Gestión de inventario y disciplina
-        Route::apiResource('sanctions', SanctionController::class);
-        Route::apiResource('movements', MovementController::class);
-        Route::apiResource('products', ProductController::class)->except(['index']);
+    // Gestión de inventario y disciplina
+    Route::apiResource('sanctions', SanctionController::class);
+    Route::apiResource('movements', MovementController::class);
+    Route::apiResource('products', ProductController::class)->except(['index']);
 
-        // Ruta específica para la agenda completa del admin
-        Route::get('/admin/appointments', [AppointmentController::class, 'index']);
-    });
+    // Ruta para la agenda completa
+    Route::get('/admin/appointments', [AppointmentController::class, 'index']);
+});
 
 
     // --- SUB-ZONA: SOLO CLIENTES ---
