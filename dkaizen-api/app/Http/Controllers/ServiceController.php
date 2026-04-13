@@ -29,14 +29,15 @@ class ServiceController extends Controller
             'description' => 'nullable|string',
             'price'       => 'required|numeric|min:0',
             'duration'    => 'required|integer', 
-            'status'      => 'boolean',
+            'status'      => 'nullable|string|in:active,inactive', // ✅ Validamos como string
             'image'       => 'nullable|string', 
         ]);
 
-        // Aseguramos que el status sea booleano real
         $data = $request->all();
+        
+        // ✅ Cambiamos 'true' por 'active'
         if (!isset($data['status'])) {
-            $data['status'] = true;
+            $data['status'] = 'active';
         }
 
         $service = Service::create($data);
@@ -69,7 +70,7 @@ class ServiceController extends Controller
             'description' => 'nullable|string',
             'price'       => 'sometimes|numeric|min:0',
             'duration'    => 'sometimes|integer',
-            'status'      => 'sometimes|boolean',
+            'status'      => 'sometimes|string|in:active,inactive', // ✅ Validamos como string
             'image'       => 'sometimes|string',
         ]);
 

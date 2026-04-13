@@ -20,8 +20,8 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'purchase_price' => 'required|numeric|min:0',
-            'stock' => 'nullable|integer|min:0', // Puede ser nulo porque en la migración le pusimos default(0)
+            'category' => 'required|string|max:255',
+            'stock' => 'nullable|integer|min:0', 
         ]);
 
         $product = Product::create($request->all());
