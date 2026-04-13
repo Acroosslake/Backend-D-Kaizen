@@ -11,14 +11,11 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'description',
         'price',
         'purchase_price',
-        'stock'
+        'stock',            // ✅ ESTA LÍNEA ES VITAL
+        'category',
+        'status'
     ];
-
-    //producto puede tener MUCHOS movimientos (entradas y salidas)
-    public function movements()
-    {
-        return $this->hasMany(Movement::class);
-    }
-    }
+}

@@ -16,21 +16,37 @@ class ProductController extends Controller
 
     //Crear un nuevo producto
     public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255',
-            'stock' => 'nullable|integer|min:0', 
+{
+    try {
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'price'          => 'required|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'category'       => 'required|string',
+            'purchase_price' => 'nullable|numeric|min:0', // ✅ Opcional
         ]);
 
-        $product = Product::create($request->all());
+        $validated['status'] = 'active';
         
+        // Si no viene precio de compra, le ponemos 0 para que no llore la DB
+        if (!isset($validated['purchase_price'])) {
+            $validated['purchase_price'] = 0;
+        }
+
+        $product = Product::create($validated);
+
         return response()->json([
             'success' => true,
-            'data' => $product
+            'data'    => $product
         ], 201);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     //Ver un producto específico
     public function show($id)
