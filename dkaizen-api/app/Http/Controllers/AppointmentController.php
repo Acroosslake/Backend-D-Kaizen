@@ -121,11 +121,12 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 5. ACTUALIZAR (Sincronización de Ingresos)
+     * 5. ACTUALIZAR (Ingresos y Limpieza de Deuda)
      */
     public function update(Request $request, $id)
     {
-        $appointment = Appointment::with('service')->findOrFail($id);
+        // ✅ Traemos el usuario con la cita para poder limpiarle la deuda
+        $appointment = Appointment::with(['service', 'user'])->findOrFail($id);
         $user = auth('api')->user();
 
         if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
@@ -135,13 +136,20 @@ class AppointmentController extends Controller
         if ($user->role === 'admin') {
             if ($request->status === 'completed') {
                 $appointment->total_price = $appointment->service->price;
+                
+                // ✅ LÓGICA DE DEUDA: Si el admin envía 'clear_debt' = true, limpiamos la multa
+                if ($request->clear_debt && $appointment->user) {
+                    $appointment->user->penalty_fee = 0;
+                    $appointment->user->save();
+                }
             }
+            // Actualizamos la cita normalmente
             $appointment->update($request->all());
         } else {
             $request->validate([
                 'appointment_date' => 'sometimes|date|after:now',
                 'notes'            => 'nullable|string',
-                'status'           => 'sometimes|string|in:cancelled' // Permitir al cliente cancelar
+                'status'           => 'sometimes|string|in:cancelled'
             ]);
             $appointment->update($request->only(['appointment_date', 'notes', 'status']));
         }

@@ -27,6 +27,16 @@ Route::get('/appointments/occupied', [AppointmentController::class, 'getOccupied
 Route::middleware('auth:api')->group(function () {
     
     Route::get('/me', function () { return response()->json(auth()->user()); });
+
+    // ✅ ESTA ES LA RUTA NUEVA PARA ACTUALIZAR EL PERFIL
+    Route::put('/user/update', function (\Illuminate\Http\Request $request) {
+        $user = auth('api')->user();
+        $user->name = $request->name;
+        $user->phone = $request->phone; // Guardamos el WhatsApp
+        $user->save();
+        return response()->json(['message' => '¡Perfil actualizado!', 'user' => $user]);
+    });
+
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- SUB-ZONA: SOLO ADMINS ---
