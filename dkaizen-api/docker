@@ -1,0 +1,1 @@
+]633;D;127]633;P;Cwd=/workspaces/Backend-D-Kaizen/dkaizen-api]633;E;docker exec -it laravel_app tail -n 50 storage/logs/laravel.log;1fdc81ff-a3f0-408c-bc7a-24b97737ace5]633;C]633;D;0]633;P;Cwd=/workspaces/Backend-D-Kaizen/dkaizen-api

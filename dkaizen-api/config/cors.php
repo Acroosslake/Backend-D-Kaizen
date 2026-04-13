@@ -13,7 +13,7 @@ return [
 
     // ✅ Leemos la URL del Front directamente de tu .env para que no falle
     'allowed_origins' => [
-        env('APP_FRONTEND_URL'), 
+        'https://fuzzy-space-halibut-jjxvp95q665rfpwqj-5173.app.github.dev',
         'http://localhost:5173',
     ],
 
