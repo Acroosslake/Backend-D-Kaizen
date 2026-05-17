@@ -27,6 +27,9 @@ services:
       POSTGRES_DB: ${DB_DATABASE:-laravel}
       POSTGRES_USER: ${DB_USERNAME:-laraveluser}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_CA: ${DB_CA}
+      
+
     ports:
       - "5432:5432" # Puerto estándar de PostgreSQL
     volumes:

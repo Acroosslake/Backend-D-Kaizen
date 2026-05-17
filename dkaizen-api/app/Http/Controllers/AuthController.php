@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -153,5 +154,65 @@ class AuthController extends Controller
             'message' => '¡Perfil actualizado con éxito, fiera!',
             'user' => $user
         ]);
+    }
+    /**
+     * Enviar enlace de recuperación de contraseña
+     */
+    public function forgotPassword(Request $request)
+    {
+        // 1. Validamos que nos manden un correo válido
+        $request->validate(['email' => 'required|email']);
+
+        // 2. Laravel busca el correo y le genera un Token de seguridad
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        // 3. Respondemos dependiendo de si funcionó o no
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'success' => true,
+                'message' => '¡Te hemos enviado un enlace de recuperación a tu correo!'
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No pudimos encontrar ningún usuario con ese correo electrónico.'
+        ], 400);
+    }
+    /**
+     * Procesar el cambio de contraseña con el token
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed', // 'confirmed' exige que envíes 'password_confirmation'
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'success' => true,
+                'message' => '¡Tu contraseña ha sido restablecida con éxito! Ya puedes iniciar sesión.'
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'El token es inválido o ha expirado. Por favor, solicita uno nuevo.'
+        ], 400);
     }
 }
