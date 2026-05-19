@@ -6,33 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
     /**
-     * Run the migrations.
+     * Ejecuta la migración.
      */
-public function up()
-{
-    Schema::table('users', function (Blueprint $table) {
-        // Por defecto todos son 'cliente'
-        $table->string('role')->default('client'); 
-    });
-
+    public function up(): void
+    {
+        // Solo intentamos crear la columna si NO existe
+        if (!Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('role')->default('client');
+            });
+        }
     }
 
     /**
-     * Reverse the migrations.
+     * Revierte la migración.
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            //
-        });
+        if (Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('role');
+            });
+        }
     }
-    public function handle($request, Closure $next, $role)
-{
-    if (auth()->user()->role !== $role) {
-        return response()->json(['message' => 'No tienes permiso, fiera.'], 403);
-    }
-    return $next($request);
-}
 };

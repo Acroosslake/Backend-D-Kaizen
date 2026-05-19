@@ -14,13 +14,10 @@ class Service extends Model
         'description',
         'duration',
         'price',
-        'status',
+        'status', // ✅ Debe ser texto: 'active' o 'inactive'
         'image'
-    ]; // ✅ Asegúrate de que termine así
-
-    protected $casts = [
-        'status' => 'boolean',
     ];
+
 
     public function appointments()
     {
