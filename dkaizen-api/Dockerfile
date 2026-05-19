@@ -22,14 +22,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # 5. Directorio de trabajo
 WORKDIR /var/www/html
 
-# 🔥 6. EL TRUCO ESTÁ AQUÍ: Copiamos TODO tu código al contenedor
-COPY . .
+# 🔥 6. EL TRUCO ESTÁ AQUÍ: Copiamos específicamente el contenido de la carpeta de Laravel
+COPY dkaizen-api/ .
 
-# 🔥 7. Instalamos las dependencias de Laravel directamente en la imagen
+# 🔥 7. Ahora sí, composer encontrará el archivo y descargará las dependencias
 RUN composer install --no-dev --optimize-autoloader
 
-# 8. Exponemos el puerto 8000
+# 8. Exponemos el puerto
 EXPOSE 8000
 
-# 9. Comando para encender el servidor
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# 9. Comando para encender el servidor adaptado a Render
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
