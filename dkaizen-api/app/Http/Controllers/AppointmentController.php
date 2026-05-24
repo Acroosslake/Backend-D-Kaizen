@@ -62,7 +62,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * 3. CREAR CITA (Con validación de choque de horario)
+     * 3. CREAR CITA (Con validación de choque, límite de días y 1 cita por usuario)
      */
     public function store(Request $request)
     {
@@ -72,6 +72,32 @@ class AppointmentController extends Controller
             'appointment_date' => 'required|date|after:now',
             'notes'            => 'nullable|string|max:500',
         ]);
+
+        // Extraemos solo el YYYY-MM-DD para hacer las validaciones
+        $fechaDeseada = substr($request->appointment_date, 0, 10);
+        $hoy = Carbon::now()->format('Y-m-d');
+        $manana = Carbon::now()->addDay()->format('Y-m-d');
+
+        // 🌟 REGLA 1: Máximo hasta el día siguiente
+        if ($fechaDeseada !== $hoy && $fechaDeseada !== $manana) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo puedes agendar citas para el día de hoy o para mañana.'
+            ], 422);
+        }
+
+        // 🌟 REGLA 2: Solo 1 cita por cliente por día
+        $citaExistenteCliente = Appointment::where('user_id', auth('api')->id())
+            ->whereDate('appointment_date', $fechaDeseada)
+            ->whereNotIn('status', ['cancelled']) // Si canceló la anterior, sí le dejamos agendar otra
+            ->exists();
+
+        if ($citaExistenteCliente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ya tienes un turno asignado para este día. ¡Solo se permite una reserva diaria!'
+            ], 422);
+        }
 
         // 🛡️ VALIDACIÓN CRÍTICA: ¿El barbero ya tiene alguien a esa misma hora?
         $exists = Appointment::where('barber_id', $request->barber_id)

@@ -24,13 +24,20 @@ Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/services', [ServiceController::class, 'index']); 
 Route::get('/barbers', [BarberController::class, 'index']);
 Route::get('/appointments/occupied', [AppointmentController::class, 'getOccupiedSlots']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+// Ruta "fantasma" requerida internamente por Laravel para armar el correo
+Route::get('/reset-password/{token}', function () {
+    return response()->json(['message' => 'Ruta base para el token']);
+})->name('password.reset');
+
 
 // --- 2. ZONA PROTEGIDA CON JWT ---
 Route::middleware('auth:api')->group(function () {
     
     Route::get('/me', function () { return response()->json(auth()->user()); });
 
-    // ✅ RUTA PARA ACTUALIZAR EL PERFIL
+    //  RUTA PARA ACTUALIZAR EL PERFIL
     Route::put('/user/update', [AuthController::class, 'updateProfile']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -71,4 +78,5 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/appointments/{id}', [AppointmentController::class, 'update']);
     Route::delete('/appointments/{id}', [AppointmentController::class, 'destroy']);
     Route::get('/products', [ProductController::class, 'index']);
+    
 });
