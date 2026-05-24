@@ -9,7 +9,7 @@ Este backend funciona como una API RESTful que alimenta la interfaz de usuario d
 * **Framework:** Laravel 11 (PHP)
 * **Base de Datos:** MySQL
 * **Entorno:** Docker / GitHub Codespaces
-* **Autenticación:** Laravel Sanctum (Tokens)
+* **Autenticación:** JWT (Tokens)
 
 ## 🏗️ Arquitectura del Código
 

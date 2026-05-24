@@ -22,14 +22,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # 5. Directorio de trabajo
 WORKDIR /var/www/html
 
-# 6. EL PASO MÁGICO: Copiar todo tu código de GitHub al servidor
-COPY . .
-
-# 7. INSTALAR DEPENDENCIAS: Armar la carpeta vendor
-RUN composer install --no-dev --optimize-autoloader
-
-# 8. Exponemos el puerto 8000
+# 6. Exponemos el puerto 8000
 EXPOSE 8000
 
-# 9. Comando para encender el servidor
+# 7. Comando para encender el servidor
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
