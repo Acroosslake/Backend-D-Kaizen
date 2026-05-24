@@ -26,7 +26,7 @@ WORKDIR /var/www/html
 COPY . .
 
 # 7. Instalamos las dependencias de Laravel
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # 8. Exponemos el puerto
 EXPOSE 8000
