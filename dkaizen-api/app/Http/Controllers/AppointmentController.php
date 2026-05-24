@@ -71,6 +71,8 @@ class AppointmentController extends Controller
             'barber_id'        => 'required|exists:barbers,id',
             'appointment_date' => 'required|date|after:now',
             'notes'            => 'nullable|string|max:500',
+        ], [
+            'appointment_date.after' => '¡Epa! Esa hora ya pasó. Por favor elige un horario en el futuro para tu corte.'
         ]);
 
         // Extraemos solo el YYYY-MM-DD para hacer las validaciones
@@ -176,9 +178,14 @@ class AppointmentController extends Controller
                 'appointment_date' => 'sometimes|date|after:now',
                 'notes'            => 'nullable|string',
                 'status'           => 'sometimes|string|in:cancelled'
+            ], [
+                // Traducción para cuando intenten reagendar en el pasado
+                'appointment_date.after' => 'La nueva fecha y hora debe ser en el futuro.'
             ]);
+            
+            // ¡Esta es la línea que te faltaba para que guarde de verdad!
             $appointment->update($request->only(['appointment_date', 'notes', 'status']));
-        }
+        } // ¡Y esta es la llave que cierra el else!
         
         return response()->json([
             'success' => true,
@@ -186,7 +193,6 @@ class AppointmentController extends Controller
             'data'    => $appointment->load(['service', 'barber.user'])
         ]);
     }
-
     /**
      * 6. NO ASISTIÓ
      */
