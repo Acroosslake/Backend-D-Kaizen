@@ -19,13 +19,16 @@ RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd
 # 4. Traemos Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 5. Directorio de trabajo
+# 5. Nos paramos en la carpeta base del servidor
 WORKDIR /var/www/html
 
-# 6. Copiamos el código al servidor
+# 6. Copiamos TODO tu repositorio de GitHub adentro
 COPY . .
 
-# 7. Instalamos las dependencias de Laravel
+# 🔥 EL TRUCO MAESTRO: Entramos a la subcarpeta donde realmente está Laravel
+WORKDIR /var/www/html/dkaizen-api
+
+# 7. Instalamos las dependencias
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # 8. Exponemos el puerto
