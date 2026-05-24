@@ -19,14 +19,14 @@ RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd
 # 4. Traemos Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 5. Directorio de trabajo
+# 5. Nos paramos en la carpeta base del servidor
 WORKDIR /var/www/html
 
-# 🔥 6. EL TRUCO ESTÁ AQUÍ: Copiamos específicamente el contenido de la carpeta de Laravel
-COPY dkaizen-api/ .
+# 6. Copiamos TODO tu repositorio de GitHub adentro
+COPY . .
 
-# 🔥 7. Ahora sí, composer encontrará el archivo y descargará las dependencias
-RUN composer install --no-dev --optimize-autoloader
+# 7. Instalamos las dependencias
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # 8. Exponemos el puerto
 EXPOSE 8000
