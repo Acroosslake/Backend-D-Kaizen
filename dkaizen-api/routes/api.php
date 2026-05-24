@@ -31,6 +31,12 @@ Route::get('/reset-password/{token}', function () {
     return response()->json(['message' => 'Ruta base para el token']);
 })->name('password.reset');
 
+Route::get('/limpiar-memoria', function () {
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    return '¡Memoria caché destruida! Laravel ya puede leer las variables nuevas, fiera.';
+});
+
 // --- 2. ZONA PROTEGIDA CON JWT ---
 Route::middleware('auth:api')->group(function () {
     

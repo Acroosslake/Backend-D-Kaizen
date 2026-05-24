@@ -84,39 +84,55 @@ class AuthController extends Controller
         return response()->json(['success' => true, 'message' => 'Sesión cerrada']);
     }
 
-    // 4. LOGIN CON GOOGLE
+    // 4. LOGIN CON GOOGLE OPTIMIZADO
     public function loginWithGoogle(Request $request)
     {
         $request->validate(['token' => 'required|string']);
 
         try {
-            $googleClient = new \Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]);
-            $googleClient->setAccessToken($request->token);
-            
-            $googleService = new \Google\Service\Oauth2($googleClient);
-            $userinfo = $googleService->userinfo->get();
+            // 🔥 TRUCO NINJA: Usamos el cliente HTTP nativo de Laravel.
+            // Va directamente a Google a validar el token sin usar librerías de terceros.
+            $googleResponse = \Illuminate\Support\Facades\Http::withToken($request->token)
+                                ->get('https://www.googleapis.com/oauth2/v3/userinfo');
 
-            if (!$userinfo || !$userinfo->email) {
-                return response()->json(['success' => false, 'message' => 'No se pudo obtener info de Google.'], 401);
+            // Si Google rechaza el token (está vencido o manipulado)
+            if ($googleResponse->failed()) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'El token de Google no es válido o ha expirado.'
+                ], 401);
             }
 
+            // Convertimos la respuesta de Google a un objeto
+            $userinfo = $googleResponse->object();
+
+            if (!isset($userinfo->email)) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'No se pudo obtener el correo de Google.'
+                ], 400);
+            }
+
+            // Buscamos al usuario en la base de datos
             $user = User::where('email', $userinfo->email)->first();
 
+            // Si es la primera vez que entra, lo registramos automáticamente
             if (!$user) {
                 $user = User::create([
                     'name' => $userinfo->name,
                     'email' => $userinfo->email,
-                    'password' => Hash::make(Str::random(16)),
+                    'password' => Hash::make(Str::random(16)), // Contraseña aleatoria segura
                     'role' => 'client',
-                    'email_verified_at' => now() // ✅ Si entra con Google, asumimos que el correo es real y lo verificamos de una.
+                    'email_verified_at' => now() // ✅ Lo damos por verificado porque viene de Google
                 ]);
             }
 
+            // Iniciamos sesión en el sistema usando tu JWT Token
             $token = Auth::guard('api')->login($user);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sesión iniciada con Google',
+                'message' => 'Sesión iniciada con Google exitosamente.',
                 'token' => $token,
                 'user' => $user
             ]);
@@ -124,7 +140,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al validar con Google.',
+                'message' => 'Error interno en el servidor.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -215,4 +231,5 @@ class AuthController extends Controller
             'message' => 'El token es inválido o ha expirado. Por favor, solicita uno nuevo.'
         ], 400);
     }
+    
 }
