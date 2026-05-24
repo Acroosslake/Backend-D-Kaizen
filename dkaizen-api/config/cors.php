@@ -23,5 +23,5 @@ return [
     'max_age' => 0,
 
     // ✅ Obligatorio para Sanctum / JWT
-    'supports_credentials' => true, 
+    'supports_credentials' => false, 
 ];
