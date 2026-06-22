@@ -141,7 +141,12 @@ class AppointmentController extends Controller
         $appointment = Appointment::with(['user', 'service', 'barber.user'])->findOrFail($id);
         $user = auth('api')->user();
         
-        if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
+        // Verificaciones de pertenencia de la cita
+        $isClientOwner = $appointment->user_id === $user->id;
+        $isAssignedBarber = $user->role === 'barber' && $user->barber && $appointment->barber_id === $user->barber->id;
+
+        // Si no es admin, ni el cliente dueño, ni el barbero asignado... bloqueamos
+        if ($user->role !== 'admin' && !$isClientOwner && !$isAssignedBarber) {
             return response()->json(['message' => 'Acceso denegado.'], 403);
         }
 
@@ -153,39 +158,51 @@ class AppointmentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // ✅ Traemos el usuario con la cita para poder limpiarle la deuda
         $appointment = Appointment::with(['service', 'user'])->findOrFail($id);
         $user = auth('api')->user();
 
-        if ($user->role !== 'admin' && $appointment->user_id !== $user->id) {
+        // Verificaciones de pertenencia de la cita
+        $isClientOwner = $appointment->user_id === $user->id;
+        $isAssignedBarber = $user->role === 'barber' && $user->barber && $appointment->barber_id === $user->barber->id;
+
+        if ($user->role !== 'admin' && !$isClientOwner && !$isAssignedBarber) {
             return response()->json(['message' => 'No tienes permiso.'], 403);
         }
 
-        if ($user->role === 'admin') {
+        if ($user->role === 'admin' || $user->role === 'barber') {
             if ($request->status === 'completed') {
                 $appointment->total_price = $appointment->service->price;
                 
-                // ✅ LÓGICA DE DEUDA: Si el admin envía 'clear_debt' = true, limpiamos la multa
-                if ($request->clear_debt && $appointment->user) {
+                // ✅ LÓGICA DE DEUDA: Solo el admin puede limpiar la multa directamente
+                if ($user->role === 'admin' && $request->clear_debt && $appointment->user) {
                     $appointment->user->penalty_fee = 0;
                     $appointment->user->save();
                 }
             }
-            // Actualizamos la cita normalmente
-            $appointment->update($request->all());
+
+            if ($user->role === 'barber') {
+                // El barbero puede gestionar los estados de su propia agenda y agregar notas de corte
+                $request->validate([
+                    'status' => 'sometimes|string|in:completed,cancelled',
+                    'notes'  => 'nullable|string'
+                ]);
+                $appointment->update($request->only(['status', 'notes']));
+            } else {
+                // El administrador mantiene control total de los campos
+                $appointment->update($request->all());
+            }
         } else {
+            // Lógica para Clientes comunes
             $request->validate([
                 'appointment_date' => 'sometimes|date|after:now',
                 'notes'            => 'nullable|string',
                 'status'           => 'sometimes|string|in:cancelled'
             ], [
-                // Traducción para cuando intenten reagendar en el pasado
                 'appointment_date.after' => 'La nueva fecha y hora debe ser en el futuro.'
             ]);
             
-            // ¡Esta es la línea que te faltaba para que guarde de verdad!
             $appointment->update($request->only(['appointment_date', 'notes', 'status']));
-        } // ¡Y esta es la llave que cierra el else!
+        }
         
         return response()->json([
             'success' => true,
@@ -193,6 +210,7 @@ class AppointmentController extends Controller
             'data'    => $appointment->load(['service', 'barber.user'])
         ]);
     }
+
     /**
      * 6. NO ASISTIÓ
      */

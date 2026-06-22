@@ -73,6 +73,12 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
     });
 
+    // --- SUB-ZONA: SOLO BARBEROS ---
+    Route::middleware('role:barber')->group(function () {
+        // Aquí definiremos las rutas exclusivas que alimentarán el BarberDashboard
+        // Ejemplo: Route::get('/barber/appointments', [AppointmentController::class, 'myAppointments']);
+    });
+
     // --- RUTAS COMPARTIDAS ---
     Route::get('/appointments', [AppointmentController::class, 'index']);
     Route::put('/appointments/{id}', [AppointmentController::class, 'update']);
