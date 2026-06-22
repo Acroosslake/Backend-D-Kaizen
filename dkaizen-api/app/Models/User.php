@@ -39,6 +39,16 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         ];
     }
 
+    /**
+     * 🚀 RELACIÓN CON EL BARBERO
+     * Un usuario con rol de barbero tiene un registro único en la tabla 'barbers'
+     */
+    public function barber()
+    {
+        // 'user_id' es la llave foránea dentro de la tabla 'barbers'
+        return $this->hasOne(Barber::class, 'user_id');
+    }
+
     // --- MÉTODOS OBLIGATORIOS PARA JWT ---
 
     public function getJWTIdentifier()
