@@ -14,6 +14,11 @@ class AuthController extends Controller
     // 1. REGISTRO MANUAL
     public function register(Request $request)
     {
+        // 🔥 PARCHE: Convertimos el correo a minúsculas antes de validar y guardar
+        if ($request->has('email')) {
+            $request->merge(['email' => strtolower($request->email)]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -42,6 +47,11 @@ class AuthController extends Controller
     // 2. LOGIN MANUAL
     public function login(Request $request)
     {
+        // 🔥 PARCHE DEFINITIVO: Convertimos el correo a minúsculas antes del login
+        if ($request->has('email')) {
+            $request->merge(['email' => strtolower($request->email)]);
+        }
+
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
@@ -113,14 +123,14 @@ class AuthController extends Controller
                 ], 400);
             }
 
-            // Buscamos al usuario en la base de datos
-            $user = User::where('email', $userinfo->email)->first();
+            // Buscamos al usuario en la base de datos (Google siempre devuelve minúsculas, así que es seguro)
+            $user = User::where('email', strtolower($userinfo->email))->first();
 
             // Si es la primera vez que entra, lo registramos automáticamente
             if (!$user) {
                 $user = User::create([
                     'name' => $userinfo->name,
-                    'email' => $userinfo->email,
+                    'email' => strtolower($userinfo->email),
                     'password' => Hash::make(Str::random(16)), // Contraseña aleatoria segura
                     'role' => 'client',
                     'email_verified_at' => now() // ✅ Lo damos por verificado porque viene de Google
@@ -171,11 +181,17 @@ class AuthController extends Controller
             'user' => $user
         ]);
     }
+
     /**
      * Enviar enlace de recuperación de contraseña
      */
     public function forgotPassword(Request $request)
     {
+        // 🔥 PARCHE: Convertimos el correo a minúsculas
+        if ($request->has('email')) {
+            $request->merge(['email' => strtolower($request->email)]);
+        }
+
         // 1. Validamos que nos manden un correo válido
         $request->validate(['email' => 'required|email']);
 
@@ -197,11 +213,17 @@ class AuthController extends Controller
             'message' => 'No pudimos encontrar ningún usuario con ese correo electrónico.'
         ], 400);
     }
+
     /**
      * Procesar el cambio de contraseña con el token
      */
     public function resetPassword(Request $request)
     {
+        // 🔥 PARCHE: Convertimos el correo a minúsculas
+        if ($request->has('email')) {
+            $request->merge(['email' => strtolower($request->email)]);
+        }
+
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
@@ -231,5 +253,4 @@ class AuthController extends Controller
             'message' => 'El token es inválido o ha expirado. Por favor, solicita uno nuevo.'
         ], 400);
     }
-    
 }
