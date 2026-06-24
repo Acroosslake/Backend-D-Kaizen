@@ -14,7 +14,6 @@ class AuthController extends Controller
     // 1. REGISTRO MANUAL
     public function register(Request $request)
     {
-        // 🔥 PARCHE: Convertimos el correo a minúsculas antes de validar y guardar
         if ($request->has('email')) {
             $request->merge(['email' => strtolower($request->email)]);
         }
@@ -22,7 +21,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8', // Subimos el mínimo a 8
+            'password' => 'required|string|min:8',
             'role' => 'sometimes|string|in:admin,barbero,client'
         ]);
 
@@ -30,24 +29,22 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'client' // Por seguridad, siempre entran como clientes
+            'role' => 'client',
+            // ✅ Lo marcamos como verificado automáticamente para evitar el bloqueo en el login
+            'email_verified_at' => now(), 
         ]);
         
-        // 🔥 MAGIA: Enviar correo de verificación
-        $user->sendEmailVerificationNotification();
-
-        // 🛑 YA NO iniciamos sesión aquí ni devolvemos el Token.
-        // Así los obligamos a ir a revisar su correo.
+        // 🚀 Ya no enviamos el correo, el usuario entra directo a la app.
+        
         return response()->json([
             'success' => true,
-            'message' => 'Usuario creado exitosamente. Por favor verifica tu correo.'
+            'message' => 'Usuario creado exitosamente.'
         ], 201);
     }
 
     // 2. LOGIN MANUAL
     public function login(Request $request)
     {
-        // 🔥 PARCHE DEFINITIVO: Convertimos el correo a minúsculas antes del login
         if ($request->has('email')) {
             $request->merge(['email' => strtolower($request->email)]);
         }
@@ -69,16 +66,16 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
-        // 🛡️ BARRERA DE SEGURIDAD: Comprobar si ya verificó el correo
+        // 🛡️ BARRERA DE SEGURIDAD COMENTADA: Ya no bloqueamos si no verificó el correo
+        /*
         if (!$user->hasVerifiedEmail()) {
-            // Cerramos la sesión que se intentó abrir
             Auth::guard('api')->logout(); 
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada o Spam.',
-            ], 403); // 403 significa Prohibido
+                'message' => 'Debes verificar tu correo...',
+            ], 403);
         }
+        */
 
         return response()->json([
             'success' => true,
@@ -100,12 +97,9 @@ class AuthController extends Controller
         $request->validate(['token' => 'required|string']);
 
         try {
-            // 🔥 TRUCO NINJA: Usamos el cliente HTTP nativo de Laravel.
-            // Va directamente a Google a validar el token sin usar librerías de terceros.
             $googleResponse = \Illuminate\Support\Facades\Http::withToken($request->token)
                                 ->get('https://www.googleapis.com/oauth2/v3/userinfo');
 
-            // Si Google rechaza el token (está vencido o manipulado)
             if ($googleResponse->failed()) {
                 return response()->json([
                     'success' => false, 
@@ -113,7 +107,6 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Convertimos la respuesta de Google a un objeto
             $userinfo = $googleResponse->object();
 
             if (!isset($userinfo->email)) {
@@ -123,21 +116,18 @@ class AuthController extends Controller
                 ], 400);
             }
 
-            // Buscamos al usuario en la base de datos (Google siempre devuelve minúsculas, así que es seguro)
             $user = User::where('email', strtolower($userinfo->email))->first();
 
-            // Si es la primera vez que entra, lo registramos automáticamente
             if (!$user) {
                 $user = User::create([
                     'name' => $userinfo->name,
                     'email' => strtolower($userinfo->email),
-                    'password' => Hash::make(Str::random(16)), // Contraseña aleatoria segura
+                    'password' => Hash::make(Str::random(16)),
                     'role' => 'client',
-                    'email_verified_at' => now() // ✅ Lo damos por verificado porque viene de Google
+                    'email_verified_at' => now() 
                 ]);
             }
 
-            // Iniciamos sesión en el sistema usando tu JWT Token
             $token = Auth::guard('api')->login($user);
 
             return response()->json([
